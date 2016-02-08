@@ -8,27 +8,52 @@
 
 import UIKit
 
-class BusinessesViewController: UIViewController, UITableViewDataSource,UITableViewDelegate {
+class BusinessesViewController: UIViewController, UITableViewDataSource,UITableViewDelegate, UISearchResultsUpdating{
 
     var businesses: [Business]!
+
+    var searchController = UISearchController()
+    var filteredRestaurants: [Business]!
     
     @IBOutlet weak var tableView: UITableView!
+    
+
     override func viewDidLoad() {
         super.viewDidLoad()
-
+        
         tableView.delegate = self
         tableView.dataSource = self
         
+        filteredRestaurants = businesses
+        
+        self.searchController = UISearchController(searchResultsController: nil)
+        self.searchController.searchResultsUpdater = self
+        
+        self.searchController.searchBar.backgroundColor = UIColor.redColor()
+        
+        self.searchController.dimsBackgroundDuringPresentation = false
+        self.searchController.searchBar.sizeToFit()
+        
+        self.tableView.tableHeaderView = self.searchController.searchBar
+        
+        
+        tableView.tableHeaderView = searchController.searchBar
         tableView.rowHeight = UITableViewAutomaticDimension
         tableView.estimatedRowHeight = 120
         
+        automaticallyAdjustsScrollViewInsets = false
+        definesPresentationContext = true
+        
         Business.searchWithTerm("Thai", completion: { (businesses: [Business]!, error: NSError!) -> Void in
             self.businesses = businesses
+            self.filteredRestaurants = businesses
             self.tableView.reloadData()
-            for business in businesses {
+            
+            for business in self.filteredRestaurants {
                 print(business.name!)
                 print(business.address!)
             }
+            
         })
 
 /* Example of Yelp search with more search options specified
@@ -50,8 +75,8 @@ class BusinessesViewController: UIViewController, UITableViewDataSource,UITableV
 
     func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         
-        if businesses != nil{
-            return businesses!.count
+        if filteredRestaurants != nil{
+            return filteredRestaurants!.count
             
         }else{
             return 0
@@ -63,10 +88,31 @@ class BusinessesViewController: UIViewController, UITableViewDataSource,UITableV
         
         let cell = tableView.dequeueReusableCellWithIdentifier("BusinessCell") as! BusinessCell
         
-        cell.business = businesses[indexPath.row]
+        cell.business = filteredRestaurants[indexPath.row]
         return cell
         
     }
+    
+    
+    func updateSearchResultsForSearchController(searchController: UISearchController){
+        /*
+        self.filteredRestaurants.removeAll(keepCapacity: false)
+        let searchPredicate = NSPredicate(format: "SELF CONTAINS[c] %@", searchController.searchBar.text!)
+        let array = (self.businesses as NSArray).filteredArrayUsingPredicate(searchPredicate)
+        
+        self.filteredRestaurants = array as! [Business]
+        
+        self.tableView.reloadData()
+        */
+        if let searchText = searchController.searchBar.text {
+            filteredRestaurants = searchText.isEmpty ? businesses : businesses.filter({(dataString: Business) -> Bool in
+                return dataString.name!.rangeOfString(searchText, options: .CaseInsensitiveSearch) != nil
+            })
+            
+            tableView.reloadData()
+        }
+    }
+    
     /*
     // MARK: - Navigation
 
